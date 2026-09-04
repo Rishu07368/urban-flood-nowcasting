@@ -1,0 +1,5 @@
+fastapi==0.141.1
+uvicorn==0.52.4
+pyswmm==2.1.0
+swmm-toolkit==0.16.2
+julian==0.14

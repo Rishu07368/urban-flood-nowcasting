@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Urban Flood Nowcasting</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+      :root {
+        --panel-bg: rgba(15, 23, 42, 0.78);
+        --panel-border: rgba(148, 163, 184, 0.35);
+        --text: #f8fafc;
+        --muted: #cbd5e1;
+        --safe: #2ecc71;
+        --low: #f1c40f;
+        --moderate: #f39c12;
+        --high: #e74c3c;
+        --critical: #8e44ad;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        height: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        background: #0f172a;
+        color: var(--text);
+      }
+
+      body {
+        overflow: hidden;
+      }
+
+      #map {
+        position: absolute;
+        inset: 0;
+      }
+
+      .hud {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 500;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        backdrop-filter: blur(6px);
+        padding: 14px 16px;
+        max-width: 360px;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.4);
+      }
+
+      .title {
+        margin: 0;
+        font-size: 1.2rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .subtitle {
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        margin-top: 14px;
+        font-size: 0.78rem;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+      }
+
+      .legend-swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        display: inline-block;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+
+      .timeline-panel {
+        position: absolute;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        width: min(780px, calc(100vw - 30px));
+        z-index: 500;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        padding: 14px 18px 10px 18px;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.4);
+      }
+
+      .forecast-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: #60a5fa;
+      }
+
+      .time-ticks {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 0.76rem;
+        color: var(--muted);
+      }
+
+      .info-box {
+        position: absolute;
+        right: 20px;
+        top: 20px;
+        z-index: 500;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        min-width: 220px;
+      }
+
+      .info-box h3 {
+        margin: 0 0 8px 0;
+        font-size: 0.88rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .info-box strong {
+        display: block;
+        font-size: 1.1rem;
+        margin-bottom: 6px;
+      }
+
+      .info-box small {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <div class="hud">
+      <h1 class="title">Urban Flood Nowcasting</h1>
+      <div class="subtitle">GIS forecast for rainfall-driven urban flooding</div>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-swatch" style="background: var(--safe);"></span> Safe</div>
+        <div class="legend-item"><span class="legend-swatch" style="background: var(--low);"></span> Low</div>
+        <div class="legend-item"><span class="legend-swatch" style="background: var(--moderate);"></span> Moderate</div>
+        <div class="legend-item"><span class="legend-swatch" style="background: var(--high);"></span> High</div>
+        <div class="legend-item"><span class="legend-swatch" style="background: var(--critical);"></span> Critical</div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <h3>Forecast</h3>
+      <strong id="forecast-display">NOW</strong>
+      <small id="summary-text">Loading risk data…</small>
+    </div>
+
+    <div class="timeline-panel">
+      <div class="forecast-label">
+        <span>Time horizon</span>
+        <span id="current-time-label">NOW</span>
+      </div>
+      <input id="forecast-slider" type="range" min="0" max="6" step="1" value="0" />
+      <div class="time-ticks">
+        <span>NOW</span>
+        <span>+30m</span>
+        <span>+1h</span>
+        <span>+1.5h</span>
+        <span>+2h</span>
+        <span>+2.5h</span>
+        <span>+3h</span>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const map = L.map('map').setView([30.74, 76.82], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      const labels = ['NOW', '+30m', '+1h', '+1.5h', '+2h', '+2.5h', '+3h'];
+      const colorMap = {
+        SAFE: '#2ecc71',
+        LOW: '#f1c40f',
+        MODERATE: '#f39c12',
+        HIGH: '#e74c3c',
+        CRITICAL: '#8e44ad'
+      };
+
+      let currentLayer = null;
+
+      function styleFeature(feature) {
+        const category = feature.properties.risk_category || 'SAFE';
+        return {
+          color: colorMap[category] || '#2ecc71',
+          fillColor: colorMap[category] || '#2ecc71',
+          fillOpacity: 0.72,
+          weight: 2,
+          opacity: 0.9
+        };
+      }
+
+      function getQueryValue(label) {
+        if (label === 'NOW') return 'NOW';
+        if (label.startsWith('+')) return label.substring(1);
+        return label;
+      }
+
+      function updateMapForIndex(index) {
+        const label = labels[index];
+        const queryValue = getQueryValue(label);
+        fetch(`/api/flood-map?time=${encodeURIComponent(queryValue)}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (currentLayer) {
+              map.removeLayer(currentLayer);
+            }
+            currentLayer = L.geoJSON(data, { style: styleFeature }).addTo(map);
+            map.fitBounds(currentLayer.getBounds(), { padding: [25, 25] });
+
+            const summary = data.summary || {};
+            const highest = summary.highest_risk_zone || 'N/A';
+            const affected = summary.affected_zones || 0;
+            const maxDepth = summary.max_depth_m || 0;
+            document.getElementById('forecast-display').textContent = label;
+            document.getElementById('current-time-label').textContent = label;
+            document.getElementById('summary-text').textContent = `Affected zones: ${affected} • Highest risk: ${highest} • Max depth: ${maxDepth.toFixed(2)} m`;
+          })
+          .catch(() => {
+            document.getElementById('summary-text').textContent = 'Risk map unavailable — backend data not ready.';
+          });
+      }
+
+      const slider = document.getElementById('forecast-slider');
+      slider.addEventListener('input', (event) => {
+        updateMapForIndex(Number(event.target.value));
+      });
+
+      updateMapForIndex(0);
+    </script>
+  </body>
+</html>

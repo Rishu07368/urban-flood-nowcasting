@@ -1,0 +1,38 @@
+{
+  "location": "Prototype Urban Catchment",
+  "issued_at": "2026-09-04T00:00:00",
+  "forecast_horizon_hours": 3,
+  "interval_minutes": 30,
+  "source": "Synthetic IMD-style nowcast",
+  "live_source": "IMD/CWC API in production",
+  "rainfall_forecast": [
+    {
+      "time": "00:00",
+      "rainfall_mm_hr": 0
+    },
+    {
+      "time": "00:30",
+      "rainfall_mm_hr": 20
+    },
+    {
+      "time": "01:00",
+      "rainfall_mm_hr": 40
+    },
+    {
+      "time": "01:30",
+      "rainfall_mm_hr": 80
+    },
+    {
+      "time": "02:00",
+      "rainfall_mm_hr": 60
+    },
+    {
+      "time": "02:30",
+      "rainfall_mm_hr": 30
+    },
+    {
+      "time": "03:00",
+      "rainfall_mm_hr": 5
+    }
+  ]
+}

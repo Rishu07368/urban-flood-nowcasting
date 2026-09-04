@@ -1,0 +1,8 @@
+
+  EPA STORM WATER MANAGEMENT MODEL - VERSION 5.2 (Build 5.2.4)
+  PYSWMM TOOLKIT API - VERSION v1.0 (2025-12-04)
+  ------------------------------------------------------------
+
+  
+  ERROR 203: too few items at line 26 of [SUBCATCHMENT] section:
+  S1       RAIN       J1       10.0   80.0      500.0   1.0
